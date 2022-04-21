@@ -1,4 +1,6 @@
 # NNLRank
+THIS IS A PROJECT WORK FOR GROUP 16, Special Topics in Software Engineering(WInter 2022, COMP-5413-WDE), Lakehead University. 
+
 **ABSTRACT**
 Open-source platforms have changed the way technology has developed in the past few decades. They allow developers to engage globally and find several projects to gain ex- pertise and become skilled in their respected fields. Open-source platforms like GitHub help to maintain a thriving developing world by cre- ating a bridge between developers and employ- ers. However, it becomes difficult for devel- opers to find suitable projects for themselves which often leads to failure in project comple- tion. This slows down the progress of open- source platforms and fails to highlight the capa- bilities of developers. We propose a learning-to- rank model, neural network for list-wise rank- ing (NNLRank), to select projects to which developers are likely to contribute, in order to reduce developers’ difficulties in onboarding projects. NNLRank recommends projects for onboarding based on project characteristics and developer experience. We devise a method for optimising the neural network that uses a list- wise loss function to minimise the difference between the forecast projects list and the devel- opers’ chosen ground-truth list. We are replicating the study (Liu et al., 2018)[10] in guidance of Dr. Muhammad Asaduzzaman.
 
@@ -22,6 +24,10 @@ We create a list-wise ranking model called NNL- Rank to recommend acceptable pro
 
 **OUTPUT FEATURE** : 
 Sucessful Onboarding
+
+**Source Code**
+
+We have provided CSV file for our Dataset with all input and output features. Also there are jupyter notebooks(Google Colab) of all models which we implemented in models folder. one need to change path and column numbers(if necessary) to dataset.Also we have provided feature exctraction part.
 
 
 **REFERENCES**
