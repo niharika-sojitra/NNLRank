@@ -9,11 +9,11 @@ We create a list-wise ranking model called NNL- Rank to recommend acceptable pro
 2. Project Growth 
 3. User Profile 
 4. Project Time 
-5.Project members 
-6.Project Size 
+5. Project members 
+6. Project Size 
 7. Open Issues per developer 
-8.Forks 
-9.Network_Count 
+8. Forks 
+9. Network_Count 
 10. Watchers 
 11. Tags 
 12. Star Count 
