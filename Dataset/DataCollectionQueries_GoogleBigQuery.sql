@@ -32,6 +32,37 @@ select id as project_id, owner_id, name as project_name,description, `language`,
             ) 
             and NOT regexp_contains(`description`, '[^ -~]')
 
+-- Querying the repositories associated with the selected list of projects
+
+select * from `ghtorrent-bq.ght_2018_04_01.repo_labels` 
+where `id` in 
+    (
+        select id from  `ghtorrent-bq.ght_2018_04_01.projects` 
+        where (`language`='Java'or `language`='Python' or `language`='JavaScript' or `language`='Ruby' or `language`='PHP'or `language`='C++'or `language`='C'or `language`='C#')
+        and (`forked_from` is null) and `deleted`=false 
+        and (LENGTH(description) - LENGTH(REPLACE(description, ' ', ''))) >=5 
+        and `id` in 
+        (
+            select repo_id from ( select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.watchers` 
+                    where repo_id in
+                    (
+                        select repo_id from 
+                        ( 
+                            select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.project_members` 
+                            group by repo_id
+                            having repo_member_count >= 5
+                            --order by repo_member_count desc
+                        )
+                    )
+                    group by repo_id
+                    having repo_member_count >= 2
+                    --order by repo_member_count desc
+                )
+        ) 
+        and NOT regexp_contains(`description`, '[^ -~]')
+    ) 
+
+
 --  Querying the project memebers for the selected projects after filtering users based on following conditions:
 --      user is not DELETED
 --      user is not marked as FAKE by Github
@@ -74,38 +105,6 @@ where
             
     )
 )
-    
---  Querying the count of memeber for the selected projects: 
-
-select repo_id as project_id,count(user_id) as project_member_count, from ghtorrent-bq.ght_2018_04_01.project_members 
-    where repo_id in
-    (
-        select `id` from  `ghtorrent-bq.ght_2018_04_01.projects` 
-            where (`language`='Java'or `language`='Python' or `language`='JavaScript' or `language`='Ruby' or `language`='PHP'or `language`='C++'or `language`='C'or `language`='C#')
-            and (`forked_from` is null) and `deleted`=false 
-            and (LENGTH(description) - LENGTH(REPLACE(description, ' ', ''))) >=5 
-            and `id` in 
-            (
-                select repo_id from ( select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.watchers` 
-                        where repo_id in
-                        (
-                            select repo_id from 
-                            ( 
-                                select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.project_members` 
-                                group by repo_id
-                                having repo_member_count >= 5
-                                --order by repo_member_count desc
-                            )
-                        )
-                        group by repo_id
-                        having repo_member_count >= 2
-                        --order by repo_member_count desc
-                    )
-            ) 
-            and NOT regexp_contains(`description`, '[^ -~]')
-    )
-    group by project_id
-    order by project_member_count desc;
 
 -- Querying the count of memeber for the selected projects (Feature=Project memeber Count): 
 
@@ -175,7 +174,8 @@ order by commit_count desc
 
 
 
--- Find count of commits by each develoepr for the selected project in order to identify successful/failed onboarding. We considered an onboarding was successful if a developer made at least 10 commits to the project
+-- Find count of commits by each develoepr for the selected project in order to identify successful/failed onboarding. We considered an onboarding was successful if a -- developer made at least 10 commits to the project. It is also used to determine if a project has a star developer or not by calculating the percentage of commits 
+-- performed by a member with respect to the total commit count for that project.
 
 select committer_id, project_id, count(`id`) as commit_count
 from `ghtorrent-bq.ght_2018_04_01.commits`
@@ -341,7 +341,7 @@ from
 )
 group by user_id, language
 
--- Querying total issue count for each project in the selected list
+-- Querying total issue count for each project in the selected list (Feature = Project Issues)
 
 SELECT repo_id,count(distinct(id)) 
 FROM `ghtorrent-bq.ght_2018_04_01.issue_labels`
@@ -375,4 +375,109 @@ where repo_id in
     )
 )
 group by repo_id;
+
+-- Querying the issue events for selected projects
+
+
+SELECT * from `ghtorrent-bq.ght_2018_04_01.issue_events` where `issue_id` in
+(
+    SELECT `id` from `ghtorrent-bq.ght_2018_04_01.issue_labels` where `repo_id` in
+    (
+        select distinct(`id`) from  `ghtorrent-bq.ght_2018_04_01.projects` 
+        where (`language`='Java'or `language`='Python' or `language`='JavaScript' or `language`='Ruby' or `language`='PHP'or `language`='C++'or `language`='C'or `language`='C#')
+        and (`forked_from` is null) and `deleted`=false 
+        and (LENGTH(description) - LENGTH(REPLACE(description, ' ', ''))) >=5 
+        and `id` in 
+        (
+            select distinct(repo_id) from ( select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.watchers` 
+                    where repo_id in
+                    (
+                        select repo_id from 
+                        ( 
+                            select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.project_members` 
+                            group by repo_id
+                            having repo_member_count >= 5
+                            order by repo_member_count desc
+                        )
+                    )
+                    group by repo_id
+                    having repo_member_count >= 2
+                    order by repo_member_count desc
+                )
+        ) 
+        and NOT regexp_contains(`description`, '[^ -~]')
+    )
+)
+
+
+-- Querying Organization of each user in the selected list of projects
+
+select * from ghtorrent-bq.ght_2018_04_01.organization_members
+where user_id in 
+(
+    select user_id from ghtorrent-bq.ght_2018_04_01.project_members 
+    where repo_id in
+    (
+        select `id` from  `ghtorrent-bq.ght_2018_04_01.projects` 
+            where (`language`='Java'or `language`='Python' or `language`='JavaScript' or `language`='Ruby' or `language`='PHP'or `language`='C++'or `language`='C'or `language`='C#')
+            and (`forked_from` is null) and `deleted`=false 
+            and (LENGTH(description) - LENGTH(REPLACE(description, ' ', ''))) >=5 
+            and `id` in 
+            (
+                select repo_id from 
+                (
+                    select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.watchers` 
+                    where repo_id in
+                    (
+                        select repo_id from 
+                        ( 
+                            select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.project_members` 
+                            group by repo_id
+                            having repo_member_count >= 5
+                            --order by repo_member_count desc
+                        )
+                    )
+                    group by repo_id
+                    having repo_member_count >= 2
+                        --order by repo_member_count desc
+                )
+            ) 
+            and NOT regexp_contains(`description`, '[^ -~]')
+    )
+)
+
+-- Query to find out Project first and last membership time for the selected projects (Feature = Time_Meb0 (first member joined since the project creation) and --
+-- Time_Meb1 (last member joined since the project creation))
+
+
+select repo_id as project_id,min(created_at) as first_membership_time,max(created_at) as last_membership_time 
+from ghtorrent-bq.ght_2018_04_01.project_members 
+    where repo_id in
+    (
+        select distinct(`id`) from  `ghtorrent-bq.ght_2018_04_01.projects` 
+            where (`language`='Java'or `language`='Python' or `language`='JavaScript' or `language`='Ruby' or `language`='PHP'or `language`='C++'or `language`='C'or `language`='C#')
+            and (`forked_from` is null) and `deleted`=false 
+            and (LENGTH(description) - LENGTH(REPLACE(description, ' ', ''))) >=5 
+            and `id` in 
+            (
+                select repo_id from ( select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.watchers` 
+                        where repo_id in
+                        (
+                            select repo_id from 
+                            ( 
+                                select repo_id, count(user_id) as repo_member_count from `ghtorrent-bq.ght_2018_04_01.project_members` 
+                                group by repo_id
+                                having repo_member_count >= 5
+                                --order by repo_member_count desc
+                            )
+                        )
+                        group by repo_id
+                        having repo_member_count >= 2
+                        --order by repo_member_count desc
+                    )
+            ) 
+            and NOT regexp_contains(`description`, '[^ -~]')
+    )
+    group by project_id;
+
 
